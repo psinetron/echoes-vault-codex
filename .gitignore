@@ -2,4 +2,22 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .coverage
+htmlcov/
 
+.idea/
+.vscode/
+.DS_Store
+
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+.env
+.env.*
+!.env.example
+
+# Runtime data created when this repository itself is used as a workspace.
+EchoesVault/
+.codex/echoes-vault-state.json

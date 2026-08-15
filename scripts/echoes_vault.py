@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
-PLUGIN_VERSION = "0.1.0"
+PLUGIN_VERSION = "0.1.1"
 STATE_VERSION = 1
 VAULT_DIRNAME = "EchoesVault"
 STATE_RELATIVE_PATH = Path(".codex") / "echoes-vault-state.json"
