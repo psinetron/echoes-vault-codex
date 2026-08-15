@@ -9,6 +9,7 @@ Persistent, repository-local memory for Codex, ported from [EchoesVault for Open
 - `$echoes-vault` — search pages, append scratchpad notes, and safely maintain knowledge pages.
 - `$echoes-end` — explicitly distill and save final session memory.
 - `$echoes-status` — show a compact dashboard with size, metrics, filesystem checks, metadata validity, index integrity, and scale warnings.
+- **OKF-aligned knowledge storage** — pages follow the core [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) model of plain Markdown, YAML frontmatter, typed concepts, portable directories, and progressive-disclosure indexes.
 - A lightweight `SessionStart` hook that asks Codex to show the current status card once in its first response after startup, resume, or clear, but only in projects that already contain `EchoesVault/index.md`. Uninitialized projects remain silent. Compaction refreshes hidden context without repeating the card.
 - Three starter actions for initialize/restore, status, and final save, so normal use does not require memorizing skill names.
 - A dependency-free Python CLI with atomic replacement writes, strict page metadata, path sanitization, and optimistic concurrency checks.
@@ -25,6 +26,26 @@ EchoesVault/
 ```
 
 Runtime state is stored in `.codex/echoes-vault-state.json`; it contains counters and session flags, not knowledge content.
+
+## Open Knowledge Format alignment
+
+EchoesVault follows the core ideas of Google's [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md): knowledge is stored as UTF-8 Markdown, concept pages begin with YAML frontmatter, every page has a `type`, and `index.md` enables progressive discovery without loading the complete vault.
+
+EchoesVault deliberately extends the strict OKF shape with Obsidian `[[wikilinks]]`, required `stack`
+and `status` fields, `daily/` session logs, and lifecycle values used by the original OpenCode plugin.
+For that reason this project describes itself as **OKF-aligned**, rather than claiming strict OKF
+v0.2 conformance. The files remain human-readable, Git-friendly, and straightforward for agents
+and generic Markdown tooling to consume.
+
+Every knowledge page uses frontmatter like:
+
+```yaml
+---
+type: architecture
+stack: [python, codex]
+status: active
+---
+```
 
 ## Status card and quick actions
 
