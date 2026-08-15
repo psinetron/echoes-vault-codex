@@ -1,0 +1,4 @@
+interface:
+  display_name: "EchoesVault: Start"
+  short_description: "Restore context from recent project logs"
+  default_prompt: "Use $echoes-start to restore the last three sessions and project index."

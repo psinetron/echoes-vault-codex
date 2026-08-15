@@ -1,0 +1,4 @@
+interface:
+  display_name: "EchoesVault"
+  short_description: "Manage persistent Markdown project memory"
+  default_prompt: "Use $echoes-vault to remember this project decision in the local vault."

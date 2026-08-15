@@ -1,0 +1,4 @@
+interface:
+  display_name: "EchoesVault: Initialize"
+  short_description: "Initialize a project knowledge vault"
+  default_prompt: "Use $echoes-init to initialize persistent project memory in this workspace."

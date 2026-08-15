@@ -1,0 +1,37 @@
+{
+  "name": "echoes-vault-codex",
+  "version": "0.1.1",
+  "description": "Persistent, repository-local Markdown memory for Codex with Obsidian-compatible pages, daily logs, and session restoration.",
+  "author": {
+    "name": "psinetron",
+    "url": "https://github.com/psinetron"
+  },
+  "homepage": "https://github.com/psinetron/echoes-vault-codex",
+  "repository": "https://github.com/psinetron/echoes-vault-codex",
+  "license": "MIT",
+  "keywords": [
+    "memory",
+    "knowledge-base",
+    "markdown",
+    "obsidian",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "EchoesVault",
+    "shortDescription": "Persistent Markdown memory for Codex",
+    "longDescription": "Keep project decisions, technical pages, and daily session logs in an Obsidian-compatible repository-local vault that Codex can restore and maintain across tasks.",
+    "developerName": "psinetron",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Initialize or restore EchoesVault for this project and show its current status.",
+      "Show EchoesVault health, integrity, and storage size.",
+      "Save this session to EchoesVault and report the final status."
+    ],
+    "brandColor": "#6C63FF"
+  }
+}

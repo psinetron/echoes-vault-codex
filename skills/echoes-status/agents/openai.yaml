@@ -1,0 +1,4 @@
+interface:
+  display_name: "EchoesVault: Status"
+  short_description: "Check vault health, integrity, and size"
+  default_prompt: "Use $echoes-status to show the project memory dashboard and explain any integrity problems."

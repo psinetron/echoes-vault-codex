@@ -1,0 +1,4 @@
+interface:
+  display_name: "EchoesVault: End"
+  short_description: "Distill and save the current session"
+  default_prompt: "Use $echoes-end to save final outcomes and next steps to project memory."
