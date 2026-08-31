@@ -10,6 +10,7 @@
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9+" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
   <a href="https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf"><img src="https://img.shields.io/badge/OKF-aligned-4285F4" alt="OKF aligned" /></a>
+  <a href="https://buymeacoffee.com/psinetron"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support-FFDD00?logo=buymeacoffee&amp;logoColor=000000" alt="Support EchoesVault on Buy Me a Coffee" /></a>
   <a href="https://github.com/psinetron/echoes-vault-codex/commits/main"><img src="https://img.shields.io/github/last-commit/psinetron/echoes-vault-codex" alt="Last commit" /></a>
 </div>
 
@@ -61,6 +62,7 @@ and adapters so Codex, OpenCode, Claude, and teammates all follow the same rules
 - [Upgrade from 0.2.x](#upgrade-from-02x)
 - [Local development](#local-development)
 - [Security and privacy](#security-and-privacy)
+- [Support](#support)
 
 ## Installation
 
@@ -543,6 +545,12 @@ to `EchoesVault/`, `.echoes-vault/`, the managed blocks in `AGENTS.md` and `CLAU
 generated Claude/OpenCode project skills inside the resolved workspace; symbolic-link escapes are
 rejected. Existing unrelated root instructions are preserved. Treat the vault like source code: do
 not store secrets unless the repository's access policy permits them.
+
+## Support
+
+If EchoesVault saves you time or helps your agents work more consistently, you can support its
+continued development on [Buy Me a Coffee](https://buymeacoffee.com/psinetron). Support is entirely
+optional—the plugin remains open source under the MIT License.
 
 ## License
 
