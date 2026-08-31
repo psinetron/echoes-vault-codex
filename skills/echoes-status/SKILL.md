@@ -1,16 +1,19 @@
 ---
 name: echoes-status
-description: Show a compact EchoesVault status card and report quantitative health, storage size, and integrity metrics, including page and log counts, session state, metadata validity, deprecations, duplicate index links, orphan pages, missing pages, and scale warnings. Use when the user asks for EchoesVault status, dashboard, health, statistics, integrity, size, or scalability.
+description: Show a compact EchoesVault status card and report protocol, adapter, storage, metadata, index, conflict, and scalability health. Use when the user asks for EchoesVault status, dashboard, health, statistics, integrity, size, compatibility, or scalability.
 ---
 
 # Report EchoesVault status
 
-Resolve `<workspace>` as the Git root when one exists, otherwise the current working directory. Resolve `<plugin-root>` as the parent of the `skills/` directory that contains this `SKILL.md`.
+Resolve `<workspace>` as the Git root when one exists, otherwise the current working directory.
+Resolve `<plugin-root>` as the parent of the `skills/` directory that contains this `SKILL.md`.
+Use `<workspace>/.echoes-vault/echoes_vault.py` as `<runtime>` when it is a regular file;
+otherwise use `<plugin-root>/scripts/echoes_vault.py`.
 
 First run the user-facing card command:
 
 ```text
-python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> status --format card
+python3 <runtime> --workspace <workspace> status --format card
 ```
 
 The status command automatically validates page metadata and regenerates `index.md` from
@@ -20,7 +23,7 @@ Return that card, translated to the user's language when helpful. If the card re
 problem, run the JSON command for details:
 
 ```text
-python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> status
+python3 <runtime> --workspace <workspace> status
 ```
 
 Briefly explain only the reported problems. Cover:
@@ -28,7 +31,8 @@ Briefly explain only the reported problems. Cover:
 - initialization and session state;
 - total size and file count;
 - page, index-topic, and daily-log counts;
-- required structure, runtime state, page frontmatter, symbolic links, and unreadable files;
+- required structure, protocol/runtime adapters, runtime state, page frontmatter, symbolic links,
+  and unreadable files;
 - duplicate index entries, empty descriptions, orphan pages, and missing linked pages;
 - unresolved Git conflict markers and deterministic index build errors.
 

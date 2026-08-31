@@ -38,6 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def render_card(workspace: Path) -> str:
     plugin_root = Path(os.environ.get("PLUGIN_ROOT") or Path(__file__).parents[1]).resolve()
+    # The bundled runtime performs protocol migrations and upgrades the project-local runtime.
     script = plugin_root / "scripts" / "echoes_vault.py"
     try:
         result = subprocess.run(

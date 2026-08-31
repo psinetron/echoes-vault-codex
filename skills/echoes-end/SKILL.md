@@ -5,7 +5,10 @@ description: Explicitly finalize an EchoesVault session by distilling the curren
 
 # Distill and save the session
 
-Resolve `<workspace>` as the Git root when one exists, otherwise the current working directory. Resolve `<plugin-root>` as the parent of the `skills/` directory that contains this `SKILL.md`.
+Resolve `<workspace>` as the Git root when one exists, otherwise the current working directory.
+Resolve `<plugin-root>` as the parent of the `skills/` directory that contains this `SKILL.md`.
+Use `<workspace>/.echoes-vault/echoes_vault.py` as `<runtime>` when it is a regular file;
+otherwise use `<plugin-root>/scripts/echoes_vault.py`.
 
 ## Prepare
 
@@ -24,6 +27,7 @@ Submit a payload like this to `end --confirm-explicit-user-end --payload -`:
 ```json
 {
   "dailySummary": "## Outcomes\n- ...\n\n## Next steps\n- ...",
+  "agent": "codex",
   "pages": [
     {
       "filename": "decision-name.md",

@@ -1,16 +1,20 @@
 ---
 name: echoes-vault
-description: Maintain persistent, repository-local project memory in EchoesVault Markdown files. Use when the user asks Codex to remember, record, log, search, recall, document, or update project knowledge; when work depends on earlier architectural decisions; or after completing a meaningful sub-task whose outcome should survive into later sessions. Do not use it for final session distillation unless the user explicitly invokes or requests echoes-end.
+description: Maintain agent-neutral, repository-local project memory through the portable EchoesVault runtime. Use when the user asks Codex to remember, record, log, search, recall, document, or update project knowledge; when work depends on earlier architectural decisions; or after a meaningful sub-task should survive across agents and sessions. Do not use it for final distillation unless the user explicitly requests echoes-end.
 ---
 
 # EchoesVault memory operations
 
-Keep durable project knowledge in `<workspace>/EchoesVault/`. Resolve `<workspace>` as the Git root when one exists, otherwise the current working directory. Resolve `<plugin-root>` as the parent of the `skills/` directory that contains this `SKILL.md`.
+Keep durable project knowledge in `<workspace>/EchoesVault/`. Resolve `<workspace>` as the Git root
+when one exists, otherwise the current working directory. Resolve `<plugin-root>` as the parent of
+the `skills/` directory that contains this `SKILL.md`. Use
+`<workspace>/.echoes-vault/echoes_vault.py` as `<runtime>` when it is a regular file; otherwise use
+`<plugin-root>/scripts/echoes_vault.py`.
 
 Run the deterministic storage CLI with:
 
 ```text
-python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> <command>
+python3 <runtime> --workspace <workspace> <command>
 ```
 
 Pass write payloads as JSON through stdin (`--payload -`) or a temporary JSON file. Do not interpolate untrusted Markdown into a shell command.
@@ -35,7 +39,7 @@ Pass write payloads as JSON through stdin (`--payload -`) or a temporary JSON fi
 Use targeted search when an existing component, decision, API, schema, or configuration might already be documented:
 
 ```text
-python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> search "specific keyword"
+python3 <runtime> --workspace <workspace> search "specific keyword"
 ```
 
 Read the returned page around each relevant line. Follow replacement links from deprecated pages.
@@ -46,7 +50,8 @@ After a verified logical unit, an architectural agreement, a context switch, or 
 
 ```json
 {
-  "entry": "- Implemented X.\n- Verified with Y.\n- Remaining blocker: Z."
+  "entry": "- Implemented X.\n- Verified with Y.\n- Remaining blocker: Z.",
+  "agent": "codex"
 }
 ```
 

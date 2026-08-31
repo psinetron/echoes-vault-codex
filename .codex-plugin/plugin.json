@@ -1,7 +1,7 @@
 {
   "name": "echoes-vault-codex",
-  "version": "0.2.0",
-  "description": "Persistent, team-safe Markdown memory for Codex with deterministic indexes, unique session logs, and Git-friendly storage.",
+  "version": "1.0.0",
+  "description": "Agent-neutral Markdown memory shared safely by Codex, OpenCode, Claude, and other coding agents.",
   "author": {
     "name": "psinetron",
     "url": "https://github.com/psinetron"
@@ -14,13 +14,16 @@
     "knowledge-base",
     "markdown",
     "obsidian",
-    "codex"
+    "codex",
+    "opencode",
+    "claude",
+    "multi-agent"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "EchoesVault",
-    "shortDescription": "Persistent Markdown memory for Codex",
-    "longDescription": "Keep project decisions, technical pages, and merge-safe session logs in an Obsidian-compatible repository-local vault with deterministic indexes and local integrity checks.",
+    "shortDescription": "Agent-neutral persistent Markdown memory",
+    "longDescription": "Share project decisions, technical pages, and merge-safe session logs across Codex, OpenCode, Claude, and other agents through one portable repository-local protocol and runtime.",
     "developerName": "psinetron",
     "category": "Productivity",
     "capabilities": [
@@ -29,6 +32,7 @@
     ],
     "defaultPrompt": [
       "Initialize or restore EchoesVault for this project and show its current status.",
+      "Configure EchoesVault so Codex, OpenCode, and Claude can share this project's memory.",
       "Show EchoesVault health, integrity, and storage size.",
       "Save this session to EchoesVault and report the final status."
     ],

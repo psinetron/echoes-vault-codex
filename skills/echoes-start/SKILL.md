@@ -5,12 +5,15 @@ description: Start an EchoesVault working session by restoring the generated pag
 
 # Restore EchoesVault context
 
-Resolve `<workspace>` as the Git root when one exists, otherwise the current working directory. Resolve `<plugin-root>` as the parent of the `skills/` directory that contains this `SKILL.md`.
+Resolve `<workspace>` as the Git root when one exists, otherwise the current working directory.
+Resolve `<plugin-root>` as the parent of the `skills/` directory that contains this `SKILL.md`.
+Use `<workspace>/.echoes-vault/echoes_vault.py` as `<runtime>` when it is a regular file;
+otherwise use `<plugin-root>/scripts/echoes_vault.py`.
 
 1. Run:
 
    ```text
-   python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> start --recent 3
+   python3 <runtime> --workspace <workspace> start --recent 3
    ```
 
    The CLI validates page summaries and rebuilds `index.md` only when its deterministic output

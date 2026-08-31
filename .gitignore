@@ -18,6 +18,7 @@ dist/
 .env.*
 !.env.example
 
-# Runtime data created when this repository itself is used as a workspace.
-EchoesVault/
+# Legacy local state from pre-1.0 releases.
 .codex/echoes-vault-state.json
+.echoes-vault/state.json
+.echoes-vault/lock

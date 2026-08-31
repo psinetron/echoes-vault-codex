@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 3,
+  "protocolVersion": "1.0.0",
+  "generatedIndex": true,
+  "dailyLayout": "unique-files-v1",
+  "runtime": ".echoes-vault/echoes_vault.py",
+  "requiredFrontmatter": [
+    "type",
+    "stack",
+    "status",
+    "summary"
+  ]
+}
