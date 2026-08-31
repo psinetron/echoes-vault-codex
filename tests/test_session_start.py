@@ -54,6 +54,14 @@ class SessionStartHookTests(unittest.TestCase):
         self.assertNotIn("show the following Markdown status card", context)
         self.assertNotIn("### EchoesVault", context)
 
+    def test_marker_restores_generated_index_after_checkout(self) -> None:
+        index = self.workspace / "EchoesVault" / "index.md"
+        index.unlink()
+        output = self.run_hook("--card")
+        context = output["hookSpecificOutput"]["additionalContext"]
+        self.assertTrue(index.is_file())
+        self.assertIn("### EchoesVault · ✓ Healthy", context)
+
     def test_uninitialized_workspace_is_completely_silent(self) -> None:
         with tempfile.TemporaryDirectory() as workspace_name:
             environment = dict(os.environ)

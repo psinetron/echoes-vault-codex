@@ -53,7 +53,7 @@ def render_card(workspace: Path) -> str:
             check=True,
             capture_output=True,
             text=True,
-            timeout=4,
+            timeout=8,
         )
         return result.stdout.strip()
     except (FileNotFoundError, subprocess.SubprocessError):
@@ -62,7 +62,11 @@ def render_card(workspace: Path) -> str:
 
 def vault_is_initialized(workspace: Path) -> bool:
     index = workspace / "EchoesVault" / "index.md"
-    return index.is_file() and not index.is_symlink()
+    marker = workspace / "EchoesVault" / ".echoes-vault.json"
+    return (
+        (marker.is_file() and not marker.is_symlink())
+        or (index.is_file() and not index.is_symlink())
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

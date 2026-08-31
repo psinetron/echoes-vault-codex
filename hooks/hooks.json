@@ -8,7 +8,7 @@
           {
             "type": "command",
             "command": "python3 \"$PLUGIN_ROOT/hooks/session_start.py\" --card",
-            "timeout": 5,
+            "timeout": 10,
             "additionalContextLimit": 2400
           }
         ]
@@ -19,7 +19,7 @@
           {
             "type": "command",
             "command": "python3 \"$PLUGIN_ROOT/hooks/session_start.py\"",
-            "timeout": 5,
+            "timeout": 10,
             "additionalContextLimit": 800
           }
         ]

@@ -115,13 +115,18 @@ creates only repository-local files:
 
 ```text
 EchoesVault/
-├── index.md
+├── .echoes-vault.json
+├── .gitignore
+├── index.md                 # generated locally; ignored by Git
 ├── pages/
-├── daily/
+├── daily/YYYY-MM-DD/        # one unique file per write
 ├── assets/
 └── raw/
 
-.codex/echoes-vault-state.json
+.codex/
+├── .gitignore
+├── echoes-vault-state.json  # local runtime state; ignored by Git
+└── echoes-vault.lock        # short-lived local lock; ignored by Git
 ```
 
 On later tasks, the first response includes a status card for initialized projects. Other projects
@@ -167,7 +172,7 @@ or used after reinstalling the plugin.
 |---|---|
 | Marketplace does not appear | Run `codex plugin marketplace list`, then restart the desktop app. |
 | Plugin is installed but skills are missing | Start a new Codex task or CLI session. |
-| Status card does not appear | Confirm that the project contains `EchoesVault/index.md`. |
+| Status card does not appear | Confirm that the project contains `EchoesVault/.echoes-vault.json`; legacy vaults may still be detected by `index.md`. |
 | Hook reports a Python error | Run `python3 --version`; version 3.9+ must be on `PATH`. |
 | Local edits are ignored | Update the manifest cachebuster, reinstall, and start a new task. |
 | You do not want memory in a project | Do not initialize it; the globally installed plugin remains silent there. |
@@ -177,27 +182,30 @@ For Codex's general plugin installation and marketplace model, see the [official
 ## What it provides
 
 - `$echoes-init` — idempotently create or activate the vault.
-- `$echoes-start` — restore the full index and three latest daily logs.
+- `$echoes-start` — rebuild and restore the full index plus the three latest session entries.
 - `$echoes-vault` — search pages, append scratchpad notes, and safely maintain knowledge pages.
 - `$echoes-end` — explicitly distill and save final session memory.
 - `$echoes-status` — show a compact dashboard with size, metrics, filesystem checks, metadata validity, index integrity, and scale warnings.
 - **OKF-aligned knowledge storage** — pages follow the core [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) model of plain Markdown, YAML frontmatter, typed concepts, portable directories, and progressive-disclosure indexes.
-- A lightweight `SessionStart` hook that asks Codex to show the current status card once in its first response after startup, resume, or clear, but only in projects that already contain `EchoesVault/index.md`. Uninitialized projects remain silent. Compaction refreshes hidden context without repeating the card.
+- A lightweight `SessionStart` hook that asks Codex to show the current status card once in its first response after startup, resume, or clear, but only in initialized projects. Uninitialized projects remain silent. Compaction refreshes hidden context without repeating the card.
 - Three starter actions for initialize/restore, status, and final save, so normal use does not require memorizing skill names.
-- A dependency-free Python CLI with atomic replacement writes, strict page metadata, path sanitization, and optimistic concurrency checks.
+- A dependency-free Python CLI with atomic replacement writes, a project-local lock, strict page metadata, conflict-marker detection, path sanitization, and optimistic concurrency checks.
 
-The managed project structure is unchanged from the OpenCode edition:
+The managed project structure is intentionally Git-friendly:
 
 ```text
 EchoesVault/
-├── index.md
+├── .echoes-vault.json       # tracked initialization marker
+├── .gitignore               # ignores only generated index.md
+├── index.md                 # generated from page metadata
 ├── pages/
-├── daily/
+├── daily/YYYY-MM-DD/        # unique scratchpad/session files
 ├── assets/
 └── raw/
 ```
 
-Runtime state is stored in `.codex/echoes-vault-state.json`; it contains counters and session flags, not knowledge content.
+Runtime state and the lock live in `.codex/echoes-vault-state.json` and
+`.codex/echoes-vault.lock`. They contain no durable knowledge and are ignored locally.
 
 ## Open Knowledge Format alignment
 
@@ -216,8 +224,15 @@ Every knowledge page uses frontmatter like:
 type: architecture
 stack: [python, codex]
 status: active
+summary: Authentication boundaries and token flow.
 ---
 ```
+
+`summary` is required, must fit on one line, and is limited to 160 characters. The Python runtime
+builds `index.md` from filenames and these summaries in a fixed Unicode-aware order. Page bodies are
+not used, so rebuilding the index consumes no model context and the same pages always produce the
+same bytes. Existing pre-0.2 vaults are migrated automatically when their old index contains a
+description for every page missing `summary`.
 
 ## Status card and quick actions
 
@@ -233,7 +248,8 @@ Integrity: index, structure, metadata, and local paths are consistent.
 ```
 
 The card is generated from live filesystem data and does not initialize, restore, or save the
-vault. Projects without `EchoesVault/index.md` show no card and receive no hook context. Use the
+vault. It may validate metadata and refresh the generated index. Projects without the initialization
+marker (or a legacy `EchoesVault/index.md`) show no card and receive no hook context. Use the
 three plugin starter actions, invoke `$echoes-status`, or ask naturally in any language: “show vault
 status”, “покажи состояние памяти”, “restore project memory”, or “сохрани эту сессию”. Exact skill
 names are optional. Codex plugins cannot pin a permanent custom sidebar, so the card appears in the
@@ -255,9 +271,56 @@ The OpenCode plugin exposes runtime tools, command templates, and a custom TUI s
 | Local CLI instead of an MCP server | No daemon, network, package install, or protocol dependency | Codex executes a local command rather than calling named MCP tools |
 | One-time SessionStart card instead of a sidebar | Live health is visible at the start of a task and after resume | There is no always-visible custom status panel |
 | Explicit start/end | Predictable token cost and no accidental final save | The user must request restoration and finalization |
-| Strict hashes and exact index replacement | Prevents silent lost updates and broad `replaceAll` mistakes | Existing-page updates need one extra hash step |
+| Frontmatter-generated local index | Stable output, no model-token rebuild cost, and no index merge conflicts | Every page needs a concise `summary` |
+| Unique daily files plus a project-local lock | Concurrent local writes and cross-branch logs do not overwrite one shared file | Same-page semantic conflicts still need human resolution |
+| Optimistic hashes for existing pages | Prevents silent lost updates | Existing-page updates need one extra hash step |
 
-Compared with the original, the port deliberately strengthens frontmatter validation, rejects path traversal, detects missing structure, symbolic links, unreadable files, invalid page metadata, and duplicate/orphan/missing index entries, uses local timezone consistently, and avoids copying OpenCode/TUI dependencies. It keeps deprecation-over-deletion, read-before-write, daily scratchpads, index synchronization, and the 200-page scale warning.
+Compared with the original, the port deliberately strengthens frontmatter validation, rejects path traversal, detects missing structure, symbolic links, unreadable files, invalid page metadata, Git conflict markers, and duplicate/orphan/missing index entries, uses local timezone consistently, and avoids copying OpenCode/TUI dependencies. It keeps deprecation-over-deletion, read-before-write, daily scratchpads, index synchronization, and the 200-page scale warning.
+
+## Team development without CI/CD
+
+Commit durable knowledge and the small initialization files:
+
+```text
+EchoesVault/.echoes-vault.json
+EchoesVault/.gitignore
+EchoesVault/pages/**
+EchoesVault/daily/**
+EchoesVault/assets/**
+EchoesVault/raw/**
+.codex/.gitignore
+```
+
+Do not commit generated or machine-local files:
+
+```text
+EchoesVault/index.md
+.codex/echoes-vault-state.json
+.codex/echoes-vault.lock
+```
+
+`echoes-init` adds those ignore rules automatically. If `EchoesVault/index.md` was already tracked
+before upgrading, remove only that file from Git's index once while keeping the local copy:
+
+```sh
+git rm --cached EchoesVault/index.md
+git add EchoesVault/.gitignore EchoesVault/.echoes-vault.json .codex/.gitignore
+git commit -m "Make EchoesVault index generated locally"
+```
+
+After pulling, switching branches, merging, starting a task, or requesting status, the index is
+regenerated automatically when needed. A manual recovery command is also available:
+
+```sh
+python3 /path/to/echoes-vault-codex/scripts/echoes_vault.py \
+  --workspace /path/to/project rebuild-index
+```
+
+Different pages and unique daily-log files normally merge cleanly. If two branches edit the same
+knowledge page, Git still reports the ordinary Markdown conflict; resolve its meaning manually,
+remove every conflict marker, keep valid frontmatter including `summary`, and request EchoesVault
+status. The health card reports unresolved `<<<<<<<`, `=======`, or `>>>>>>>` markers. No CI job,
+Git hook, daemon, or background watcher is required.
 
 ## Local development
 
@@ -280,7 +343,10 @@ The runtime requires Python 3.9 or newer and only the standard library.
 
 ## Security and privacy
 
-EchoesVault makes no network requests and has no authentication. Vault data operations are confined to `EchoesVault/` and `.codex/echoes-vault-state.json` inside the resolved workspace; symbolic-link escapes are rejected. Treat the vault like source code: do not store secrets unless the repository's access policy permits them.
+EchoesVault makes no network requests and has no authentication. Vault data operations are confined
+to `EchoesVault/`, `.codex/echoes-vault-state.json`, and `.codex/echoes-vault.lock` inside the
+resolved workspace; symbolic-link escapes are rejected. Treat the vault like source code: do not
+store secrets unless the repository's access policy permits them.
 
 ## License
 

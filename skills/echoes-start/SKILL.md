@@ -1,6 +1,6 @@
 ---
 name: echoes-start
-description: Start an EchoesVault working session by restoring the full page index and the three most recent daily Markdown logs. Use only when the user explicitly asks to start or resume a session, restore project memory, continue previous work, or invokes echoes-start.
+description: Start an EchoesVault working session by restoring the generated page index and the three most recent session entries. Use only when the user explicitly asks to start or resume a session, restore project memory, continue previous work, or invokes echoes-start.
 ---
 
 # Restore EchoesVault context
@@ -13,7 +13,10 @@ Resolve `<workspace>` as the Git root when one exists, otherwise the current wor
    python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> start --recent 3
    ```
 
-2. Analyze the returned index and logs; do not merely repeat them.
+   The CLI validates page summaries and rebuilds `index.md` only when its deterministic output
+   changed. This is filesystem work and does not load page bodies into the model context.
+
+2. Analyze the returned index and session entries; do not merely repeat them.
 3. Summarize:
    - the last completed outcomes;
    - unresolved blockers;

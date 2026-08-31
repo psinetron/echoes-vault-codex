@@ -1,7 +1,7 @@
 {
   "name": "echoes-vault-codex",
-  "version": "0.1.1",
-  "description": "Persistent, repository-local Markdown memory for Codex with Obsidian-compatible pages, daily logs, and session restoration.",
+  "version": "0.2.0",
+  "description": "Persistent, team-safe Markdown memory for Codex with deterministic indexes, unique session logs, and Git-friendly storage.",
   "author": {
     "name": "psinetron",
     "url": "https://github.com/psinetron"
@@ -20,7 +20,7 @@
   "interface": {
     "displayName": "EchoesVault",
     "shortDescription": "Persistent Markdown memory for Codex",
-    "longDescription": "Keep project decisions, technical pages, and daily session logs in an Obsidian-compatible repository-local vault that Codex can restore and maintain across tasks.",
+    "longDescription": "Keep project decisions, technical pages, and merge-safe session logs in an Obsidian-compatible repository-local vault with deterministic indexes and local integrity checks.",
     "developerName": "psinetron",
     "category": "Productivity",
     "capabilities": [

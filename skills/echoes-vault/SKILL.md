@@ -20,10 +20,13 @@ Pass write payloads as JSON through stdin (`--payload -`) or a temporary JSON fi
 1. Read before writing. Search the vault and read an existing page before updating it.
 2. Store dry technical facts, decisions, contracts, configurations, verified fixes, blockers, and next steps—not chat transcripts.
 3. Start every page with YAML frontmatter containing `type`, `stack`, and `status`.
-4. Keep one index line per page: `- [[page-slug]]: One-sentence description.`
-5. Use `[[wikilinks]]` for page references and `![[asset.png]]` for files in `EchoesVault/assets/`.
-6. Deprecate instead of deleting. Prepend `> [!warning] DEPRECATED` and link to the replacement.
-7. Never report final memory as saved after normal task completion. Only `$echoes-end` may finalize a session.
+4. Include `summary`: a non-empty single line of at most 160 characters describing the page.
+5. Never edit `index.md`; the CLI generates it deterministically from page filenames, `summary`,
+   and `status` without loading page bodies into model context.
+6. Use `[[wikilinks]]` for page references and `![[asset.png]]` for files in `EchoesVault/assets/`.
+7. Deprecate instead of deleting. Set `status: deprecated`, prepend `> [!warning] DEPRECATED`,
+   and link to the replacement.
+8. Never report final memory as saved after normal task completion. Only `$echoes-end` may finalize a session.
 
 ## Choose an operation
 
@@ -60,8 +63,7 @@ For a new page, submit to `upsert --payload -`:
 ```json
 {
   "filename": "auth-architecture.md",
-  "content": "---\ntype: architecture\nstack: [python]\nstatus: active\n---\n\n# Authentication architecture\n",
-  "indexDescription": "Authentication boundaries and token flow."
+  "content": "---\ntype: architecture\nstack: [python]\nstatus: active\nsummary: Authentication boundaries and token flow.\n---\n\n# Authentication architecture\n"
 }
 ```
 
@@ -71,8 +73,11 @@ For an existing page:
 2. Run `hash <filename>` and copy its `sha256`.
 3. Submit the full replacement content plus `expectedSha256` to `upsert`.
 
-The optimistic hash prevents overwriting a concurrent edit. If it fails, reread the page and reconcile changes.
+Retain or deliberately update the page's `summary` when replacing its full content. The optimistic
+hash prevents overwriting a concurrent edit in the current checkout. If it fails, reread the page
+and reconcile changes. A project-level runtime lock serializes simultaneous EchoesVault writers.
 
 ## Successful completion
 
-Confirm the exact daily log or page path written. Mention whether the index changed. Keep working unless the user requested a final save.
+Confirm the exact session-entry or page path written. Mention whether the generated index changed.
+Keep working unless the user requested a final save.

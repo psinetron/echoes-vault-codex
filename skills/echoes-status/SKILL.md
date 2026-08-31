@@ -13,6 +13,9 @@ First run the user-facing card command:
 python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> status --format card
 ```
 
+The status command automatically validates page metadata and regenerates `index.md` from
+frontmatter summaries. Never rebuild the index by asking the model to read every page.
+
 Return that card, translated to the user's language when helpful. If the card reports an integrity
 problem, run the JSON command for details:
 
@@ -26,7 +29,8 @@ Briefly explain only the reported problems. Cover:
 - total size and file count;
 - page, index-topic, and daily-log counts;
 - required structure, runtime state, page frontmatter, symbolic links, and unreadable files;
-- duplicate index entries, empty descriptions, orphan pages, and missing linked pages.
+- duplicate index entries, empty descriptions, orphan pages, and missing linked pages;
+- unresolved Git conflict markers and deterministic index build errors.
 
 If `scaleAlert` is true, append:
 
@@ -35,4 +39,5 @@ If `scaleAlert` is true, append:
 > The vault exceeds 200 pages. Prefer targeted search and consider hybrid retrieval.
 ```
 
-Do not inspect architectural meaning or mutate the vault.
+Do not inspect or alter the architectural meaning of knowledge pages. The CLI may refresh the
+generated index and local runtime state as part of its integrity check.

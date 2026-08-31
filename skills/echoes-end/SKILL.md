@@ -1,6 +1,6 @@
 ---
 name: echoes-end
-description: Explicitly finalize an EchoesVault session by distilling the current conversation into a dense daily summary, durable knowledge pages, and exact index updates. Use only when the user asks to end, wrap up, finalize, or save the session to EchoesVault, or explicitly invokes echoes-end. Never trigger merely because an ordinary task finished.
+description: Explicitly finalize an EchoesVault session by distilling the current conversation into a dense daily summary and durable knowledge pages, then regenerating the deterministic index. Use only when the user asks to end, wrap up, finalize, or save the session to EchoesVault, or explicitly invokes echoes-end. Never trigger merely because an ordinary task finished.
 ---
 
 # Distill and save the session
@@ -14,6 +14,8 @@ Resolve `<workspace>` as the Git root when one exists, otherwise the current wor
 3. Search and read relevant existing pages before proposing page changes.
 4. For every existing page update, run `hash <filename>` after reading it and include the returned `sha256` as `expectedSha256`.
 5. Prefer deprecation plus a replacement page over deleting historical documentation.
+6. Give every new or updated page a non-empty, single-line `summary` of at most 160 characters.
+   Never edit or propose exact mutations for `index.md`; the CLI generates it from page metadata.
 
 ## Commit
 
@@ -25,19 +27,16 @@ Submit a payload like this to `end --confirm-explicit-user-end --payload -`:
   "pages": [
     {
       "filename": "decision-name.md",
-      "content": "---\ntype: decision\nstack: [codex]\nstatus: active\n---\n\n# Decision\n...",
-      "indexDescription": "The decision and its consequences."
-    }
-  ],
-  "indexUpdates": [
-    {
-      "oldLine": "- [[old-page]]: Old description.",
-      "newLine": "- [[old-page]]: DEPRECATED; replaced by [[decision-name]]."
+      "content": "---\ntype: decision\nstack: [codex]\nstatus: active\nsummary: The decision and its consequences.\n---\n\n# Decision\n..."
     }
   ]
 }
 ```
 
-Use an empty `pages` or `indexUpdates` array when unnecessary. The CLI validates every page and index mutation before writing, appends one final `Session` block to today's log, and marks memory saved only with the explicit confirmation flag.
+Use an empty `pages` array when no durable page needs changing. To deprecate a page, update its
+frontmatter `status` and `summary` plus its body rather than sending `indexUpdates`. The CLI validates
+the complete page set before writing, regenerates the index, creates a merge-safe unique `Session`
+log file, and marks memory saved only with the explicit confirmation flag.
 
-Report the written daily log, page count, and index result. If validation or a concurrency hash fails, do not claim success; reread, reconcile, and retry.
+Report the written session log, page count, and generated index result. If validation or a
+concurrency hash fails, do not claim success; reread, reconcile, and retry.

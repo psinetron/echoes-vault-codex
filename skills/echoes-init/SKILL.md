@@ -20,13 +20,22 @@ Resolve `<workspace>` as the Git root when one exists, otherwise the current wor
 3. If it contains page entries, briefly list their concepts. Otherwise, state that a fresh vault is ready.
 4. Explain that `$echoes-start` restores recent context and `$echoes-end` performs the explicit final save.
 
-Initialization is idempotent: never overwrite an existing index, page, daily log, raw source, or asset. The managed structure is:
+Initialization is idempotent. It never overwrites a knowledge page, log, raw source, or asset.
+`index.md` is a generated local view: the CLI validates page frontmatter, migrates legacy index
+descriptions into missing `summary` fields when possible, and deterministically rebuilds the index.
+Do not ask the model to read every page or construct the index itself.
+
+The managed structure is:
 
 ```text
 EchoesVault/
+├── .echoes-vault.json
+├── .gitignore
 ├── index.md
 ├── pages/
 ├── daily/
 ├── assets/
 └── raw/
 ```
+
+The generated index and `.codex/` runtime state are ignored locally to avoid branch conflicts.
