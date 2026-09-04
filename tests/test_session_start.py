@@ -54,7 +54,7 @@ class SessionStartHookTests(unittest.TestCase):
         self.assertNotIn("show the following Markdown status card", context)
         self.assertNotIn("### EchoesVault", context)
 
-    def test_marker_restores_generated_index_and_agent_adapters_after_checkout(self) -> None:
+    def test_session_start_reports_missing_files_without_repairing_them(self) -> None:
         index = self.workspace / "EchoesVault" / "index.md"
         protocol = self.workspace / "EchoesVault" / "AGENT_PROTOCOL.md"
         runtime = self.workspace / ".echoes-vault" / "echoes_vault.py"
@@ -63,10 +63,49 @@ class SessionStartHookTests(unittest.TestCase):
         runtime.unlink()
         output = self.run_hook("--card")
         context = output["hookSpecificOutput"]["additionalContext"]
-        self.assertTrue(index.is_file())
-        self.assertTrue(protocol.is_file())
-        self.assertTrue(runtime.is_file())
-        self.assertIn("### EchoesVault · ✓ Healthy", context)
+        self.assertFalse(index.exists())
+        self.assertFalse(protocol.exists())
+        self.assertFalse(runtime.exists())
+        self.assertIn("### EchoesVault · △ Needs attention", context)
+
+    def test_session_start_does_not_change_tracked_files(self) -> None:
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "init", "-b", "main"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "config", "user.name", "Echoes Test"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "config", "user.email", "echoes@example.invalid"],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "add", "-A"], check=True
+        )
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "commit", "-m", "init"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        before = subprocess.run(
+            ["git", "-C", str(self.workspace), "status", "--porcelain=v1"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        self.run_hook("--card")
+        after = subprocess.run(
+            ["git", "-C", str(self.workspace), "status", "--porcelain=v1"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+        self.assertEqual(after, before)
 
     def test_uninitialized_workspace_is_completely_silent(self) -> None:
         with tempfile.TemporaryDirectory() as workspace_name:

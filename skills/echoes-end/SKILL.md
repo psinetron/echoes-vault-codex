@@ -7,8 +7,9 @@ description: Explicitly finalize an EchoesVault session by distilling the curren
 
 Resolve `<workspace>` as the Git root when one exists, otherwise the current working directory.
 Resolve `<plugin-root>` as the parent of the `skills/` directory that contains this `SKILL.md`.
-Use `<workspace>/.echoes-vault/echoes_vault.py` as `<runtime>` when it is a regular file;
-otherwise use `<plugin-root>/scripts/echoes_vault.py`.
+Use `<plugin-root>/scripts/echoes_vault.py` as `<launcher>`. It delegates execution to a compatible
+project runtime, recovers a missing runtime for an initialized vault, refuses an outdated runtime
+until explicit upgrade, and never downgrades a newer one.
 
 ## Prepare
 
@@ -22,7 +23,15 @@ otherwise use `<plugin-root>/scripts/echoes_vault.py`.
 
 ## Commit
 
-Submit a payload like this to `end --confirm-explicit-user-end --payload -`:
+Submit a payload through stdin to:
+
+```text
+python3 <launcher> --workspace <workspace> \
+  --agent codex --adapter-version 1.1.0 end \
+  --confirm-explicit-user-end --payload -
+```
+
+Payload:
 
 ```json
 {

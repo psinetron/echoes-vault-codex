@@ -2,6 +2,9 @@
 
 - Status: **stable**
 - Protocol version: **1.0.0**
+- Reference engine version: **1.1.0**
+- Marker schema version: **3**
+- Local state schema version: **4**
 - Reference runtime: `.echoes-vault/echoes_vault.py`
 - License: [MIT](LICENSE)
 
@@ -248,14 +251,18 @@ may indicate an uninitialized or legacy vault and requires a recognized initiali
 path; `init` is the canonical path. A value other than `protocolVersion: "1.0.0"` MUST stop
 Protocol 1.0.0 writes.
 
-`schemaVersion`, runtime version, plugin version, and protocol version are different concepts:
+`schemaVersion`, engine version, adapter version, plugin version, and protocol version are different
+concepts:
 
 - `protocolVersion` identifies this interoperability contract;
 - `schemaVersion` identifies the marker shape;
-- `runtimeVersion` identifies a particular portable engine build;
-- `pluginVersion` identifies an agent integration release.
+- `engineVersion` identifies a particular portable storage-engine build;
+- `adapterVersion` identifies the invoking agent adapter;
+- a plugin-package version identifies one distributable integration release.
 
-Only `protocolVersion` establishes write compatibility.
+Only `protocolVersion` establishes on-disk write compatibility. Engine and adapter versions MUST
+NOT be compared with one another. In particular, an OpenCode plugin version is not a Python engine
+version.
 
 ## 7. Knowledge pages
 
@@ -394,12 +401,12 @@ The reference filename format is:
 
 ```text
 EchoesVault/daily/YYYY-MM-DD/
-YYYYMMDDTHHMMSSffffff-<kind>[-<agent>]-<8-lowercase-hex>.md
+YYYYMMDDTHHMMSSffffffZ-<kind>[-<agent>]-<8-lowercase-hex>.md
 ```
 
 Where:
 
-- timestamps use the workspace machine's local timezone;
+- the directory date and filename timestamp use UTC, and `Z` is mandatory for new files;
 - `kind` is `scratchpad` or `session`;
 - `agent` is optional provenance;
 - the final eight hexadecimal characters come from four random bytes.
@@ -418,6 +425,9 @@ Agent: `codex`
 - Confirmed the authentication boundary.
 ```
 
+The Markdown heading records local wall-clock time with an explicit UTC offset for human reading.
+Ordering and filenames use UTC so agents in different time zones agree on the latest entries.
+
 A final-session entry uses `### Session — <timestamp>` and otherwise has the same optional agent
 line and Markdown body structure.
 
@@ -427,14 +437,13 @@ create only unique nested files.
 ## 10. Local state
 
 `.echoes-vault/state.json` is ignored by Git and is not durable project memory. The reference
-runtime currently writes state schema version 3:
+engine 1.1.0 writes state schema version 4:
 
 ```json
 {
-  "version": 3,
-  "pluginVersion": "1.0.0",
-  "runtimeVersion": "1.0.0",
+  "version": 4,
   "protocolVersion": "1.0.0",
+  "engineVersion": "1.1.0",
   "initialized": true,
   "session": {
     "started": true,
@@ -446,6 +455,10 @@ runtime currently writes state schema version 3:
     "totalPages": 12,
     "totalDailyLogs": 8,
     "deprecatedPages": 1
+  },
+  "lastWriter": {
+    "agent": "codex",
+    "adapterVersion": "1.1.0"
   }
 }
 ```
@@ -458,8 +471,9 @@ replace the marker or Markdown sources.
 
 ### 11.1 Shared local lock
 
-Every reference-runtime command runs while holding `.echoes-vault/lock`, including read-oriented
-commands that may repair adapters or regenerate derived state.
+Every command that writes managed files runs while holding `.echoes-vault/lock`. `inspect`,
+`status`, `protocol`, `search`, and `hash` are read-only and do not create the lock. `hydrate` may
+briefly create the ignored lock while refreshing only ignored generated files.
 
 A conforming native writer MUST interoperate with this lock:
 
@@ -513,6 +527,19 @@ python3 .echoes-vault/echoes_vault.py --workspace <path> <command> [arguments]
 runtime resolves it to the repository root. Payload-bearing commands accept a JSON object from
 standard input with `--payload -`, or from a UTF-8 JSON file path.
 
+Adapters SHOULD identify themselves without changing protocol negotiation:
+
+```sh
+python3 .echoes-vault/echoes_vault.py --workspace . \
+  --agent codex --adapter-version 1.1.0 <command>
+```
+
+After initialization, the project-local runtime is the execution source. A bundled plugin runtime
+MAY be used only for initial bootstrap, explicit `upgrade`, or recovery of a missing project
+runtime. A launcher MUST delegate or re-execute through a compatible project runtime. It MUST NOT
+continue mutating with its bundled code after discovering a newer compatible project runtime, and
+MUST NOT downgrade that runtime.
+
 Shell adapters SHOULD send untrusted Markdown through standard input or a temporary payload file.
 They MUST NOT interpolate untrusted Markdown into a shell command.
 
@@ -551,6 +578,10 @@ and reported as a health issue for manual reconciliation.
 The JSON result includes `ok`, `created`, `vault`, `index`, `indexRefresh`, `agentAdapters`, and
 `state`.
 
+`migrate` and `upgrade` use the same full installation boundary. `migrate` communicates explicit
+legacy conversion intent; `upgrade` communicates explicit project runtime and adapter upgrade
+intent. Neither command may downgrade a newer compatible engine.
+
 ### 12.3 `protocol`
 
 ```sh
@@ -567,24 +598,26 @@ MUST still fail closed when an operation encounters an unsupported marker.
 python3 .echoes-vault/echoes_vault.py --workspace . configure-agents
 ```
 
-Repairs or refreshes the runtime, generated protocol, root managed blocks, Claude/OpenCode skills,
-OpenCode commands, ignore rules, and index. It does not author new knowledge; when upgrading a
-legacy vault, it may inject page summaries derived from the old index. It requires an initialized
-or recognizable legacy vault.
+Repairs or refreshes the generated protocol, root managed blocks, Claude/OpenCode skills,
+OpenCode commands, ignore rules, and index. Runtime replacement belongs to explicit `upgrade` or
+missing-runtime recovery. This command does not author new knowledge. Recognized legacy
+OpenCode skills are replaced with short redirect skills; unknown user-owned files are preserved and
+reported as adapter configuration conflicts. It requires an initialized vault. Legacy conversion
+belongs to `init` or `migrate`.
 
-### 12.5 `status`
+### 12.5 `inspect` and `status`
 
 ```sh
+python3 .echoes-vault/echoes_vault.py --workspace . inspect
 python3 .echoes-vault/echoes_vault.py --workspace . status
 python3 .echoes-vault/echoes_vault.py --workspace . status --format card
 ```
 
-`status` returns JSON by default. `--format card` returns a compact Markdown status card suitable
-for a user interface.
-
-For an initialized vault, status may repair managed adapters, refresh the generated index, migrate
-eligible legacy summaries, and update local state. It is therefore operationally idempotent but not
-guaranteed to be filesystem read-only.
+`inspect` returns JSON by default. `--format card` returns a compact Markdown status card suitable
+for a user interface. `status` is an exact read-only alias. Neither command creates, rewrites,
+migrates, hydrates, repairs, or locks any file. A SessionStart integration MUST use this boundary.
+When only a legacy vault is found, the card reports `Legacy vault detected` and directs the user to
+explicit `init`/`migrate`.
 
 The JSON result contains:
 
@@ -596,11 +629,25 @@ The JSON result contains:
 - unresolved Git conflict markers;
 - symbolic links and unreadable files;
 - local-state health;
+- project-runtime recognition, engine/protocol compatibility, and adapter conflicts;
+- Git readiness, including ignored or untracked durable files and tracked local-only files;
+- exact suggested `git add`, `git add -f`, or `git rm --cached` commands without executing them;
 - total vault bytes, files, Markdown files, and latest modification time;
 - `scaleAlert`, set when there are more than 200 top-level knowledge pages;
 - aggregate `integrity` (`healthy` or `attention`) and `issueCount`.
 
 The scale alert is advisory. It recommends targeted search; it does not prevent reads or writes.
+
+### 12.5.1 `hydrate`
+
+```sh
+python3 .echoes-vault/echoes_vault.py --workspace . hydrate
+```
+
+`hydrate` requires a compatible project runtime and valid marker. It may rewrite only the ignored
+generated `EchoesVault/index.md` and `.echoes-vault/state.json` (plus an ephemeral ignored lock).
+It MUST NOT alter protocol files, runtime code, root guides, agent skills, commands, or durable
+knowledge. It does not perform legacy migration.
 
 ### 12.6 `start`
 
@@ -773,9 +820,9 @@ Ordinary task completion is not authorization to invoke `end`.
 python3 .echoes-vault/echoes_vault.py --workspace . rebuild-index
 ```
 
-Validates page metadata, migrates eligible legacy summaries, reconstructs the deterministic index,
-and updates local state. The JSON result includes `rebuilt`, migrated filenames, page count, and
-the index SHA-256.
+Validates page metadata, reconstructs the deterministic index, and updates local state. It does not
+migrate legacy page summaries. The JSON result includes `rebuilt`, page count, and the index
+SHA-256.
 
 ## 13. Recommended agent lifecycle
 
@@ -847,6 +894,8 @@ Projects MUST NOT commit:
 EchoesVault/index.md
 .echoes-vault/state.json
 .echoes-vault/lock
+.opencode/echoes-state.json
+.codex/echoes-vault-state.json
 ```
 
 Unique daily files and an ignored generated index eliminate the most common cross-branch conflicts.
@@ -856,15 +905,15 @@ Git conflict resolution is still required:
 1. reconcile the page's meaning manually;
 2. remove every `<<<<<<<`, `=======`, and `>>>>>>>` line;
 3. retain valid required frontmatter and an accurate summary;
-4. run `status` or `rebuild-index`.
+4. run `hydrate` or `rebuild-index`, then use `status` to verify without changing files.
 
 The local runtime lock does not replace Git merge handling.
 
 ## 15. Migration from legacy vaults
 
-`init`, `status`, and other operations that require a valid vault can migrate a pre-1.0 page that
-has `type`, `stack`, and `status` but no `summary` when the legacy index contains exactly one valid,
-non-empty description for that page slug.
+Only explicit `init` or `migrate` may migrate a pre-1.0 page that has `type`, `stack`, and `status`
+but no `summary` when the legacy index contains exactly one valid, non-empty description for that
+page slug. `inspect`, `status`, SessionStart hooks, and `hydrate` MUST NOT perform this migration.
 
 Migration:
 
@@ -877,9 +926,21 @@ Migration:
 If any missing summary has no usable legacy description, migration stops and reports every detected
 metadata error before writing migrated pages.
 
-The reference runtime can import compatible session fields from legacy
-`.codex/echoes-vault-state.json` into local `.echoes-vault/state.json`. Legacy state is not durable
-knowledge and SHOULD NOT be used by new integrations.
+The reference runtime imports compatible session fields in this priority order:
+
+1. `.echoes-vault/state.json`;
+2. `.opencode/echoes-state.json`;
+3. `.codex/echoes-vault-state.json`;
+4. default state.
+
+It preserves `initialized`, `session.started`, `session.saved`, `session.lastStart`, and
+`session.lastSave`, then writes schema 4 only during an authorized writing command. Legacy state is
+not durable knowledge and SHOULD NOT be used by new integrations.
+
+Recognized legacy OpenCode skill directories for append, search, and page upsert are replaced by
+redirect skills that invoke the shared project runtime. If their content does not match a known
+legacy signature, the implementation MUST preserve the user-owned content and report an adapter
+configuration conflict.
 
 Legacy tools that edit `index.md` directly, append to a shared daily file, or overwrite pages
 without current hashes MUST be disabled after migration.
@@ -942,15 +1003,20 @@ Example Python adapter:
 ```python
 import json
 import subprocess
+from typing import Optional
 
 
-def run_echoes(workspace: str, command: list[str], payload: dict | None = None):
+def run_echoes(workspace: str, command: list[str], payload: Optional[dict] = None):
     process = subprocess.run(
         [
             "python3",
             f"{workspace}/.echoes-vault/echoes_vault.py",
             "--workspace",
             workspace,
+            "--agent",
+            "my-agent",
+            "--adapter-version",
+            "1.0.0",
             *command,
         ],
         input=json.dumps(payload) if payload is not None else None,
@@ -986,12 +1052,16 @@ Before claiming Protocol 1.0.0 compatibility, verify that the implementation:
 - [ ] produces the exact deterministic index ordering and content;
 - [ ] never edits the index as user-authored knowledge;
 - [ ] writes unique nested daily files;
+- [ ] uses UTC directory dates and `Z` filename timestamps for new daily entries;
 - [ ] uses the shared local lock and atomic file replacement;
 - [ ] requires a current SHA-256 before updating an existing page;
 - [ ] detects unsafe paths, symlinks, filename collisions, and conflict markers;
 - [ ] keeps initialization, restoration, and finalization under explicit user control;
 - [ ] does not report final memory as saved unless `end` succeeds;
 - [ ] preserves unrelated agent instructions and user-owned files;
+- [ ] keeps `inspect`/`status` and SessionStart strictly read-only;
+- [ ] delegates to a newer compatible project runtime without downgrading it;
+- [ ] reports Git readiness without running `git add` or `git rm`;
 - [ ] passes interoperability tests against the reference runtime.
 
 ## 20. Versioning and extensions

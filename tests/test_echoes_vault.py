@@ -9,7 +9,9 @@ import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
+from datetime import datetime, timezone
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "echoes_vault.py"
@@ -110,6 +112,54 @@ class EchoesVaultTests(unittest.TestCase):
         self.assertEqual(protocol["supportedProtocolVersion"], "1.0.0")
         self.assertEqual(protocol["vaultProtocolVersion"], "1.0.0")
 
+    def test_older_launcher_delegates_to_newer_project_runtime_without_downgrade(self) -> None:
+        self.run_cli("init")
+        runtime = self.workspace / ".echoes-vault" / "echoes_vault.py"
+        current = runtime.read_text(encoding="utf-8")
+        newer = current.replace('ENGINE_VERSION = "1.1.0"', 'ENGINE_VERSION = "9.0.0"')
+        newer += "\n# newer-project-runtime-sentinel\n"
+        runtime.write_text(newer, encoding="utf-8")
+
+        old_launcher = self.workspace / "old-codex-launcher.py"
+        old_launcher.write_text(
+            SCRIPT.read_text(encoding="utf-8")
+            .replace('CODEX_ADAPTER_VERSION = "1.1.0"', 'CODEX_ADAPTER_VERSION = "1.0.0"')
+            .replace('ENGINE_VERSION = "1.1.0"', 'ENGINE_VERSION = "1.0.0"'),
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(old_launcher),
+                "--workspace",
+                str(self.workspace),
+                "upgrade",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(json.loads(result.stdout)["state"]["engineVersion"], "9.0.0")
+        installed = runtime.read_text(encoding="utf-8")
+        self.assertIn('ENGINE_VERSION = "9.0.0"', installed)
+        self.assertIn("newer-project-runtime-sentinel", installed)
+
+    def test_explicit_upgrade_repairs_an_older_project_runtime(self) -> None:
+        self.run_cli("init")
+        runtime = self.workspace / ".echoes-vault" / "echoes_vault.py"
+        runtime.write_text(
+            runtime.read_text(encoding="utf-8").replace(
+                'ENGINE_VERSION = "1.1.0"', 'ENGINE_VERSION = "1.0.0"'
+            ),
+            encoding="utf-8",
+        )
+        code, _, error = self.run_cli("start")
+        self.assertEqual(code, 2)
+        self.assertIn("older than engine 1.1.0", error)
+        code, _, error = self.run_cli("upgrade")
+        self.assertEqual(code, 0, error)
+        self.assertIn('ENGINE_VERSION = "1.1.0"', runtime.read_text())
+
     def test_init_replaces_recognized_legacy_opencode_commands(self) -> None:
         command = self.workspace / ".opencode" / "commands" / "echoes-end.md"
         command.parent.mkdir(parents=True)
@@ -139,13 +189,13 @@ class EchoesVaultTests(unittest.TestCase):
         )
         self.assertEqual(health["integrity"], "attention")
 
-    def test_configure_agents_repairs_same_version_portable_runtime(self) -> None:
+    def test_explicit_upgrade_repairs_same_version_portable_runtime(self) -> None:
         self.run_cli("init")
         runtime = self.workspace / ".echoes-vault" / "echoes_vault.py"
         runtime.write_text(runtime.read_text() + "\n# accidental edit\n", encoding="utf-8")
-        code, output, error = self.run_cli("configure-agents")
+        code, output, error = self.run_cli("upgrade")
         self.assertEqual(code, 0, error)
-        self.assertTrue(json.loads(output)["runtimeUpdated"])
+        self.assertFalse(json.loads(output)["agentAdapters"]["runtimeUpdated"])
         self.assertNotIn("accidental edit", runtime.read_text())
 
     def test_unsupported_protocol_fails_closed(self) -> None:
@@ -181,7 +231,109 @@ class EchoesVaultTests(unittest.TestCase):
         self.run_cli("init")
         state = json.loads((self.workspace / ".echoes-vault" / "state.json").read_text())
         self.assertTrue(state["session"]["started"])
-        self.assertEqual(state["version"], 3)
+        self.assertEqual(state["version"], 4)
+        self.assertEqual(state["engineVersion"], "1.1.0")
+        self.assertEqual(state["lastWriter"]["agent"], "codex")
+        self.assertNotIn("pluginVersion", state)
+        self.assertNotIn("runtimeVersion", state)
+
+    def test_legacy_opencode_state_has_priority_and_preserves_session(self) -> None:
+        codex_state = self.workspace / ".codex" / "echoes-vault-state.json"
+        codex_state.parent.mkdir(parents=True)
+        codex_state.write_text(
+            json.dumps({"initialized": False, "session": {"started": False}}),
+            encoding="utf-8",
+        )
+        opencode_state = self.workspace / ".opencode" / "echoes-state.json"
+        opencode_state.parent.mkdir(parents=True)
+        opencode_state.write_text(
+            json.dumps(
+                {
+                    "initialized": True,
+                    "session": {
+                        "started": True,
+                        "saved": True,
+                        "lastStart": "2026-08-31T10:00:00.000Z",
+                        "lastSave": "2026-08-31T11:00:00.000Z",
+                    },
+                    "pluginVersion": "1.2.3",
+                }
+            ),
+            encoding="utf-8",
+        )
+        code, _, error = self.run_cli("migrate")
+        self.assertEqual(code, 0, error)
+        state = json.loads((self.workspace / ".echoes-vault" / "state.json").read_text())
+        self.assertTrue(state["initialized"])
+        self.assertTrue(state["session"]["started"])
+        self.assertTrue(state["session"]["saved"])
+        self.assertEqual(state["session"]["lastStart"], "2026-08-31T10:00:00.000Z")
+        self.assertEqual(state["session"]["lastSave"], "2026-08-31T11:00:00.000Z")
+        self.assertEqual(state["lastWriter"], {"agent": "opencode", "adapterVersion": "1.2.3"})
+
+    def test_init_redirects_known_legacy_opencode_skills_and_preserves_unknown(self) -> None:
+        known = (
+            self.workspace
+            / ".opencode"
+            / "skills"
+            / "echoes-append-to-daily-log"
+            / "SKILL.md"
+        )
+        known.parent.mkdir(parents=True)
+        known.write_text("Call echoes_append_to_daily_log directly.\n", encoding="utf-8")
+        unknown = (
+            self.workspace
+            / ".opencode"
+            / "skills"
+            / "echoes-search-vault-pages"
+            / "SKILL.md"
+        )
+        unknown.parent.mkdir(parents=True)
+        custom = "# User-owned skill\n\nKeep this implementation.\n"
+        unknown.write_text(custom, encoding="utf-8")
+
+        code, output, error = self.run_cli("init")
+        self.assertEqual(code, 0, error)
+        adapters = json.loads(output)["agentAdapters"]
+        self.assertIn(
+            ".opencode/skills/echoes-append-to-daily-log/SKILL.md",
+            adapters["legacySkillsRedirected"],
+        )
+        self.assertIn("Legacy redirect", known.read_text())
+        self.assertEqual(unknown.read_text(), custom)
+        self.assertIn(
+            ".opencode/skills/echoes-search-vault-pages/SKILL.md",
+            adapters["adapterConflicts"],
+        )
+
+    def test_status_is_strictly_read_only(self) -> None:
+        self.run_cli("init")
+        index = self.workspace / "EchoesVault" / "index.md"
+        index.write_text(index.read_text() + "\nLocal stale text.\n", encoding="utf-8")
+
+        def snapshot() -> dict[str, bytes]:
+            return {
+                str(path.relative_to(self.workspace)): path.read_bytes()
+                for path in self.workspace.rglob("*")
+                if path.is_file() and not path.is_symlink()
+            }
+
+        before = snapshot()
+        code, output, error = self.run_cli("status")
+        self.assertEqual(code, 0, error)
+        self.assertEqual(snapshot(), before)
+        self.assertEqual(json.loads(output)["health"]["indexOutOfDate"], ["index.md"])
+
+    def test_legacy_status_card_requires_explicit_migration(self) -> None:
+        vault = self.workspace / "EchoesVault"
+        vault.mkdir()
+        (vault / "index.md").write_text(echoes_vault.DEFAULT_INDEX, encoding="utf-8")
+        before = (vault / "index.md").read_bytes()
+        code, card, error = self.run_cli("inspect", "--format", "card")
+        self.assertEqual(code, 0, error)
+        self.assertIn("Legacy vault detected", card)
+        self.assertEqual((vault / "index.md").read_bytes(), before)
+        self.assertFalse((vault / ".echoes-vault.json").exists())
 
     def test_upsert_search_and_status(self) -> None:
         self.run_cli("init")
@@ -350,10 +502,17 @@ class EchoesVaultTests(unittest.TestCase):
             encoding="utf-8",
         )
 
+        before_page = page.read_text()
+        before_index = index.read_text()
         code, output, error = self.run_cli("status")
         self.assertEqual(code, 0, error)
         status = json.loads(output)
-        self.assertEqual(status["indexRefresh"]["migratedSummaries"], ["legacy.md"])
+        self.assertEqual(status["indexRefresh"]["migratedSummaries"], [])
+        self.assertEqual(page.read_text(), before_page)
+        self.assertEqual(index.read_text(), before_index)
+        code, output, error = self.run_cli("migrate")
+        self.assertEqual(code, 0, error)
+        self.assertEqual(json.loads(output)["indexRefresh"]["migratedSummaries"], ["legacy.md"])
         self.assertIn("summary: \"Migrated legacy description.\"", page.read_text())
         self.assertIn("[[legacy]]: Migrated legacy description.", index.read_text())
 
@@ -403,7 +562,8 @@ class EchoesVaultTests(unittest.TestCase):
         daily_files = list((self.workspace / "EchoesVault" / "daily").rglob("*.md"))
         self.assertEqual(len(daily_files), 2)
         self.assertEqual(len({item.name for item in daily_files}), 2)
-        self.assertTrue(all(item.parent.name == echoes_vault.today() for item in daily_files))
+        self.assertTrue(all(item.parent.name == echoes_vault.utc_today() for item in daily_files))
+        self.assertTrue(all("Z-" in item.name for item in daily_files))
 
     def test_logs_can_record_cross_agent_provenance(self) -> None:
         self.run_cli("init")
@@ -420,6 +580,124 @@ class EchoesVaultTests(unittest.TestCase):
             daily = Path(result["dailyLog"])
             self.assertIn(f"-scratchpad-{agent}-", daily.name)
             self.assertIn(f"Agent: `{agent}`", daily.read_text())
+
+    def test_daily_paths_sort_by_utc_across_local_time_zones(self) -> None:
+        paths = echoes_vault.vault_paths(self.workspace.resolve())
+        paths["daily"].mkdir(parents=True)
+        utc_moments = [
+            datetime(2026, 9, 4, 23, 59, 59, 999999, tzinfo=timezone.utc),
+            datetime(2026, 9, 5, 0, 0, 0, 1, tzinfo=timezone.utc),
+        ]
+        with mock.patch.object(echoes_vault, "utc_now", side_effect=utc_moments):
+            first = echoes_vault.new_daily_log(paths, "scratchpad", "west\n", "codex")
+            second = echoes_vault.new_daily_log(paths, "scratchpad", "east\n", "opencode")
+        self.assertEqual(first.parent.name, "2026-09-04")
+        self.assertEqual(second.parent.name, "2026-09-05")
+        self.assertIn("T235959999999Z-", first.name)
+        self.assertIn("T000000000001Z-", second.name)
+        self.assertEqual(echoes_vault.daily_markdown_files(paths["daily"]), [first, second])
+
+    def test_codex_and_opencode_share_runtime_state_and_knowledge(self) -> None:
+        code, _, error = self.run_cli(
+            "--agent", "codex", "--adapter-version", "1.1.0", "init"
+        )
+        self.assertEqual(code, 0, error)
+        code, output, error = self.run_cli(
+            "--agent",
+            "opencode",
+            "--adapter-version",
+            "1.2.3",
+            "append",
+            "--payload",
+            "-",
+            stdin={"entry": "Written through the shared engine."},
+        )
+        self.assertEqual(code, 0, error)
+        self.assertIn("-scratchpad-opencode-", Path(json.loads(output)["dailyLog"]).name)
+        code, context, error = self.run_cli(
+            "--agent", "codex", "--adapter-version", "1.1.0", "start"
+        )
+        self.assertEqual(code, 0, error)
+        self.assertIn("Written through the shared engine.", context)
+        state = json.loads((self.workspace / ".echoes-vault" / "state.json").read_text())
+        self.assertEqual(state["lastWriter"]["agent"], "codex")
+
+    def test_opencode_init_codex_upsert_opencode_status(self) -> None:
+        code, _, error = self.run_cli(
+            "--agent", "opencode", "--adapter-version", "1.2.3", "init"
+        )
+        self.assertEqual(code, 0, error)
+        payload = {
+            "filename": "shared-contract.md",
+            "content": (
+                "---\ntype: contract\nstack: [python]\nstatus: active\n"
+                "summary: Shared cross-agent contract.\n---\n\n# Shared contract\n"
+            ),
+        }
+        code, _, error = self.run_cli(
+            "--agent",
+            "codex",
+            "--adapter-version",
+            "1.1.0",
+            "upsert",
+            "--payload",
+            "-",
+            stdin=payload,
+        )
+        self.assertEqual(code, 0, error)
+        code, output, error = self.run_cli(
+            "--agent", "opencode", "--adapter-version", "1.2.3", "status"
+        )
+        self.assertEqual(code, 0, error)
+        self.assertEqual(json.loads(output)["health"]["totalPages"], 1)
+
+    def test_git_readiness_reports_root_ignored_opencode_adapters(self) -> None:
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "init", "-b", "main"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        (self.workspace / ".gitignore").write_text(".opencode/\n", encoding="utf-8")
+        self.run_cli("init")
+        code, output, error = self.run_cli("status")
+        self.assertEqual(code, 0, error)
+        git_health = json.loads(output)["health"]["git"]
+        self.assertFalse(git_health["ready"])
+        self.assertTrue(git_health["openCodeCommandsIgnored"])
+        self.assertTrue(git_health["openCodeSkillsIgnored"])
+        self.assertTrue(any(command.startswith("git add -f --") for command in git_health["suggestedCommands"]))
+
+    def test_git_readiness_reports_accidentally_tracked_local_files(self) -> None:
+        subprocess.run(
+            ["git", "-C", str(self.workspace), "init", "-b", "main"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.run_cli("init")
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(self.workspace),
+                "add",
+                "-f",
+                "EchoesVault/index.md",
+                ".echoes-vault/state.json",
+            ],
+            check=True,
+        )
+        code, output, error = self.run_cli("status")
+        self.assertEqual(code, 0, error)
+        git_health = json.loads(output)["health"]["git"]
+        self.assertEqual(
+            git_health["trackedLocalFiles"],
+            [".echoes-vault/state.json", "EchoesVault/index.md"],
+        )
+        self.assertTrue(
+            any(command.startswith("git rm --cached --") for command in git_health["suggestedCommands"])
+        )
 
     def test_parallel_writes_keep_every_page_indexed(self) -> None:
         self.run_cli("init")
@@ -458,6 +736,50 @@ class EchoesVaultTests(unittest.TestCase):
         self.assertEqual(health["indexTopics"], 24)
         self.assertEqual(health["orphanPages"], [])
         self.assertEqual(health["integrity"], "healthy")
+
+    def test_parallel_processes_keep_daily_logs_and_pages(self) -> None:
+        self.run_cli("init")
+        runtime = self.workspace / ".echoes-vault" / "echoes_vault.py"
+
+        def write(number: int) -> subprocess.CompletedProcess[str]:
+            if number % 2:
+                command = ["append", "--payload", "-"]
+                payload = {"entry": f"Concurrent log {number}.", "agent": "opencode"}
+            else:
+                command = ["upsert", "--payload", "-"]
+                payload = {
+                    "filename": f"mixed-{number}.md",
+                    "content": (
+                        "---\ntype: note\nstack: [test]\nstatus: active\n"
+                        f"summary: Mixed concurrent page {number}.\n---\n\n# Mixed {number}\n"
+                    ),
+                }
+            return subprocess.run(
+                [
+                    sys.executable,
+                    str(runtime),
+                    "--workspace",
+                    str(self.workspace),
+                    "--agent",
+                    "opencode" if number % 2 else "codex",
+                    "--adapter-version",
+                    "1.1.0",
+                    *command,
+                ],
+                input=json.dumps(payload),
+                capture_output=True,
+                text=True,
+            )
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            results = list(pool.map(write, range(20)))
+        self.assertTrue(all(result.returncode == 0 for result in results))
+        code, output, error = self.run_cli("status")
+        self.assertEqual(code, 0, error)
+        health = json.loads(output)["health"]
+        self.assertEqual(health["totalPages"], 10)
+        self.assertEqual(health["totalDailyLogs"], 10)
+        self.assertEqual(health["indexTopics"], 10)
 
     def test_independent_git_branches_merge_without_generated_file_conflicts(self) -> None:
         def git(*args: str) -> subprocess.CompletedProcess[str]:
@@ -513,6 +835,13 @@ class EchoesVaultTests(unittest.TestCase):
         merge = git("merge", "--no-edit", "developer-a")
         self.assertNotIn("CONFLICT", merge.stdout + merge.stderr)
 
+        code, output, error = self.run_cli("status")
+        self.assertEqual(code, 0, error)
+        health = json.loads(output)["health"]
+        self.assertEqual(health["integrity"], "attention")
+        self.assertEqual(health["indexOutOfDate"], ["index.md"])
+        code, _, error = self.run_cli("hydrate")
+        self.assertEqual(code, 0, error)
         code, output, error = self.run_cli("status")
         self.assertEqual(code, 0, error)
         health = json.loads(output)["health"]

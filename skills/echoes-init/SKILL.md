@@ -17,7 +17,8 @@ newer one.
 1. Run:
 
    ```text
-   python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> init
+   python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> \
+     --agent codex --adapter-version 1.1.0 init
    ```
 
 2. Read `<workspace>/EchoesVault/index.md`.
@@ -28,6 +29,10 @@ Initialization is idempotent. It never overwrites a knowledge page, log, raw sou
 `index.md` is a generated local view: the CLI validates page frontmatter, migrates legacy index
 descriptions into missing `summary` fields when possible, and deterministically rebuilds the index.
 Do not ask the model to read every page or construct the index itself.
+
+The bundled launcher is used only to bootstrap, explicitly upgrade, or recover a missing project
+runtime. It installs the compatible runtime and re-executes the command through
+`<workspace>/.echoes-vault/echoes_vault.py`. A newer compatible project runtime is never downgraded.
 
 The managed structure is:
 

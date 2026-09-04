@@ -8,13 +8,15 @@ description: Maintain agent-neutral, repository-local project memory through the
 Keep durable project knowledge in `<workspace>/EchoesVault/`. Resolve `<workspace>` as the Git root
 when one exists, otherwise the current working directory. Resolve `<plugin-root>` as the parent of
 the `skills/` directory that contains this `SKILL.md`. Use
-`<workspace>/.echoes-vault/echoes_vault.py` as `<runtime>` when it is a regular file; otherwise use
-`<plugin-root>/scripts/echoes_vault.py`.
+`<plugin-root>/scripts/echoes_vault.py` as `<launcher>`. It delegates execution to a compatible
+project runtime, recovers a missing runtime for an initialized vault, refuses an outdated runtime
+until explicit upgrade, and never downgrades a newer one.
 
 Run the deterministic storage CLI with:
 
 ```text
-python3 <runtime> --workspace <workspace> <command>
+python3 <launcher> --workspace <workspace> \
+  --agent codex --adapter-version 1.1.0 <command>
 ```
 
 Pass write payloads as JSON through stdin (`--payload -`) or a temporary JSON file. Do not interpolate untrusted Markdown into a shell command.
@@ -39,7 +41,8 @@ Pass write payloads as JSON through stdin (`--payload -`) or a temporary JSON fi
 Use targeted search when an existing component, decision, API, schema, or configuration might already be documented:
 
 ```text
-python3 <runtime> --workspace <workspace> search "specific keyword"
+python3 <launcher> --workspace <workspace> \
+  --agent codex --adapter-version 1.1.0 search "specific keyword"
 ```
 
 Read the returned page around each relevant line. Follow replacement links from deprecated pages.

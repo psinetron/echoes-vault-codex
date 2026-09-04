@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def render_card(workspace: Path) -> str:
     plugin_root = Path(os.environ.get("PLUGIN_ROOT") or Path(__file__).parents[1]).resolve()
-    # The bundled runtime performs protocol migrations and upgrades the project-local runtime.
+    # Bundled inspect delegates to a compatible project runtime and never migrates or repairs.
     script = plugin_root / "scripts" / "echoes_vault.py"
     try:
         result = subprocess.run(
@@ -47,7 +47,7 @@ def render_card(workspace: Path) -> str:
                 str(script),
                 "--workspace",
                 str(workspace),
-                "status",
+                "inspect",
                 "--format",
                 "card",
             ],
