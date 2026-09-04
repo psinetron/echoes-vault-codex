@@ -2,7 +2,7 @@
 ## EchoesVault project memory
 
 This repository uses the agent-neutral EchoesVault protocol 1.0.0.
-Adapter version: 1.1.0. Reference engine: 1.1.0.
+Managed adapter version: 1.1.1. Reference engine: 1.1.1.
 
 Before accessing persistent project memory, read `EchoesVault/AGENT_PROTOCOL.md`. Use the project
 runtime with `--workspace . --agent <agent-name> --adapter-version <adapter-version> <command>` for

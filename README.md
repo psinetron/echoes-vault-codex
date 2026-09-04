@@ -3,7 +3,7 @@
   <p>Agent-neutral, repository-local Markdown memory bootstrapped from Codex.</p>
 
   <a href="https://learn.chatgpt.com/docs/plugins"><img src="https://img.shields.io/badge/Codex-Plugin-111827?logo=openai&amp;logoColor=white" alt="Codex Plugin" /></a>
-  <img src="https://img.shields.io/badge/Release-1.1.0-2563EB" alt="Release 1.1.0" />
+  <img src="https://img.shields.io/badge/Release-1.1.1-2563EB" alt="Release 1.1.1" />
   <a href="EchoesProtocol.md"><img src="https://img.shields.io/badge/Protocol-1.0.0-7C3AED" alt="Protocol 1.0.0" /></a>
   <a href="#using-different-agents"><img src="https://img.shields.io/badge/Agents-Codex%20%7C%20OpenCode%20%7C%20Claude-059669" alt="Codex, OpenCode, and Claude" /></a>
   <a href="https://github.com/psinetron/echoes-vault-codex/actions/workflows/tests.yml"><img src="https://github.com/psinetron/echoes-vault-codex/actions/workflows/tests.yml/badge.svg" alt="Tests" /></a>
@@ -20,7 +20,7 @@ instructions into the repository; after that, every supported agent uses the sam
 locking, logs, and deterministic index. Knowledge stays in plain Markdown, remains readable without
 any agent, works naturally with Git, and opens as an Obsidian-compatible vault.
 
-**Codex adapter:** `1.1.0` · **Engine:** `1.1.0` · **Protocol:** `1.0.0` · **Marker schema:** `3`
+**Managed adapters:** `1.1.1` · **Engine:** `1.1.1` · **Protocol:** `1.0.0` · **Marker schema:** `3`
 
 ## Quick start
 
@@ -60,7 +60,7 @@ and adapters so Codex, OpenCode, Claude, and teammates all follow the same rules
 - [Open Knowledge Format alignment](#open-knowledge-format-alignment)
 - [Status card and quick actions](#status-card-and-quick-actions)
 - [Team development without CI/CD](#team-development-without-cicd)
-- [Upgrade to 1.1.0](#upgrade-to-110)
+- [Upgrade to 1.1.1](#upgrade-to-111)
 - [Local development](#local-development)
 - [Security and privacy](#security-and-privacy)
 - [Support](#support)
@@ -205,7 +205,7 @@ repository once and run its bundled engine against the target project:
 ```sh
 git clone https://github.com/psinetron/echoes-vault-codex.git
 python3 echoes-vault-codex/scripts/echoes_vault.py \
-  --workspace /path/to/your/project --agent codex --adapter-version 1.1.0 init
+  --workspace /path/to/your/project --agent codex --adapter-version 1.1.1 init
 ```
 
 Commit the generated protocol, portable runtime, and adapters in the target project. Teammates and
@@ -270,7 +270,7 @@ For Codex's general plugin installation and marketplace model, see the [official
 - `$echoes-end` — explicitly distill and save final session memory.
 - `$echoes-status` — show a compact dashboard with size, metrics, filesystem checks, metadata validity, index integrity, and scale warnings.
 - **Agent Protocol 1.0.0** — a tracked contract that every coding agent reads before using memory.
-- **Portable engine 1.1.0** — the same dependency-free Python storage engine is committed into each initialized repository and is always the execution source after bootstrap.
+- **Portable engine 1.1.1** — the same dependency-free Python storage engine is committed into each initialized repository and is always the execution source after bootstrap.
 - **Claude and OpenCode adapters** — project skills and root instruction blocks are installed without replacing unrelated user instructions.
 - **OKF-aligned knowledge storage** — pages follow the core [Open Knowledge Format (OKF)](https://github.com/GoogleCloudPlatform/knowledge-catalog/tree/main/okf) model of plain Markdown, YAML frontmatter, typed concepts, portable directories, and progressive-disclosure indexes.
 - A lightweight `SessionStart` hook that asks Codex to show the current status card once in its first response after startup, resume, or clear, but only in initialized projects. Uninitialized projects remain silent. Compaction refreshes hidden context without repeating the card.
@@ -417,7 +417,7 @@ compact card similar to:
 |---|---|---|
 | 186.4 KB · 48 files | 42 pages · 6 logs | active |
 
-Protocol: 1.0.0 · engine: 1.1.0 · adapters ready.
+Protocol: 1.0.0 · engine: 1.1.1 · adapters ready.
 Integrity: index, structure, metadata, and local paths are consistent.
 ```
 
@@ -530,11 +530,12 @@ ignored and local `state.json`/`lock` files that were accidentally tracked, with
 commands; it never runs `git add` or `git rm` itself. No CI job,
 Git hook, daemon, or background watcher is required.
 
-### Upgrade to 1.1.0
+### Upgrade to 1.1.1
 
-After installing the Codex adapter 1.1.0, run initialization once in every existing vault. It keeps
-Protocol 1.0.0, installs engine 1.1.0, migrates local state to schema 4, and refreshes the managed
-agent adapters:
+After installing the Codex plugin 1.1.1, run initialization once in every existing vault. It keeps
+Protocol 1.0.0, installs engine 1.1.1, preserves local state schema 4, and refreshes the managed
+agent adapters. This patch also exposes the neutral `managedAdapterVersion` diagnostics field;
+`codexAdapterVersion` remains as a deprecated compatibility alias for existing integrations:
 
 ```text
 Update this project's EchoesVault to protocol 1.0.0.
@@ -545,7 +546,7 @@ Or run the bundled engine directly:
 
 ```sh
 python3 /path/to/echoes-vault-codex/scripts/echoes_vault.py --workspace . \
-  --agent codex --adapter-version 1.1.0 upgrade
+  --agent codex --adapter-version 1.1.1 upgrade
 ```
 
 State is read in this priority: `.echoes-vault/state.json`, `.opencode/echoes-state.json`, then

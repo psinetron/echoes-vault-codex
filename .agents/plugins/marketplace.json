@@ -9,7 +9,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/psinetron/echoes-vault-codex.git",
-        "ref": "v1.1.0"
+        "ref": "v1.1.1"
       },
       "policy": {
         "installation": "AVAILABLE",

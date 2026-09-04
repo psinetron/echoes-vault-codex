@@ -2,7 +2,8 @@
 
 - Status: **stable**
 - Protocol version: **1.0.0**
-- Reference engine version: **1.1.0**
+- Reference engine version: **1.1.1**
+- Managed adapter version: **1.1.1**
 - Marker schema version: **3**
 - Local state schema version: **4**
 - Reference runtime: `.echoes-vault/echoes_vault.py`
@@ -437,13 +438,13 @@ create only unique nested files.
 ## 10. Local state
 
 `.echoes-vault/state.json` is ignored by Git and is not durable project memory. The reference
-engine 1.1.0 writes state schema version 4:
+engine 1.1.1 writes state schema version 4:
 
 ```json
 {
   "version": 4,
   "protocolVersion": "1.0.0",
-  "engineVersion": "1.1.0",
+  "engineVersion": "1.1.1",
   "initialized": true,
   "session": {
     "started": true,
@@ -458,7 +459,7 @@ engine 1.1.0 writes state schema version 4:
   },
   "lastWriter": {
     "agent": "codex",
-    "adapterVersion": "1.1.0"
+    "adapterVersion": "1.1.1"
   }
 }
 ```
@@ -531,7 +532,7 @@ Adapters SHOULD identify themselves without changing protocol negotiation:
 
 ```sh
 python3 .echoes-vault/echoes_vault.py --workspace . \
-  --agent codex --adapter-version 1.1.0 <command>
+  --agent codex --adapter-version 1.1.1 <command>
 ```
 
 After initialization, the project-local runtime is the execution source. A bundled plugin runtime
@@ -588,9 +589,12 @@ intent. Neither command may downgrade a newer compatible engine.
 python3 .echoes-vault/echoes_vault.py --workspace . protocol
 ```
 
-Reports the runtime's supported protocol, the marker's protocol when present, managed protocol and
-runtime paths, and the available command names. Integrations SHOULD use it for diagnostics, but
-MUST still fail closed when an operation encounters an unsupported marker.
+Reports `engineVersion`, `managedAdapterVersion`, the runtime's supported protocol, the marker's
+protocol when present, managed protocol and runtime paths, and the available command names.
+Reference engine 1.1.1 also reports deprecated `codexAdapterVersion` as an alias of
+`managedAdapterVersion`; integrations SHOULD migrate to the neutral field.
+Integrations SHOULD use it for diagnostics, but MUST still fail closed when an operation encounters
+an unsupported marker.
 
 ### 12.4 `configure-agents`
 

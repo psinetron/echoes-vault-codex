@@ -16,7 +16,7 @@ Run the deterministic storage CLI with:
 
 ```text
 python3 <launcher> --workspace <workspace> \
-  --agent codex --adapter-version 1.1.0 <command>
+  --agent codex --adapter-version 1.1.1 <command>
 ```
 
 Pass write payloads as JSON through stdin (`--payload -`) or a temporary JSON file. Do not interpolate untrusted Markdown into a shell command.
@@ -42,7 +42,7 @@ Use targeted search when an existing component, decision, API, schema, or config
 
 ```text
 python3 <launcher> --workspace <workspace> \
-  --agent codex --adapter-version 1.1.0 search "specific keyword"
+  --agent codex --adapter-version 1.1.1 search "specific keyword"
 ```
 
 Read the returned page around each relevant line. Follow replacement links from deprecated pages.

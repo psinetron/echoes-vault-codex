@@ -15,7 +15,7 @@ until explicit upgrade, and never downgrades a newer one.
 
    ```text
    python3 <launcher> --workspace <workspace> \
-     --agent codex --adapter-version 1.1.0 start --recent 3
+     --agent codex --adapter-version 1.1.1 start --recent 3
    ```
 
    The CLI validates page summaries and rebuilds `index.md` only when its deterministic output

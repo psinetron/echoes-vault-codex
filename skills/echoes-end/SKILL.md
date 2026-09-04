@@ -27,7 +27,7 @@ Submit a payload through stdin to:
 
 ```text
 python3 <launcher> --workspace <workspace> \
-  --agent codex --adapter-version 1.1.0 end \
+  --agent codex --adapter-version 1.1.1 end \
   --confirm-explicit-user-end --payload -
 ```
 

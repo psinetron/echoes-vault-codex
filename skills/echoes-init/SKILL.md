@@ -18,7 +18,7 @@ newer one.
 
    ```text
    python3 <plugin-root>/scripts/echoes_vault.py --workspace <workspace> \
-     --agent codex --adapter-version 1.1.0 init
+     --agent codex --adapter-version 1.1.1 init
    ```
 
 2. Read `<workspace>/EchoesVault/index.md`.
