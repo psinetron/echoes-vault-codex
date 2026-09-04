@@ -4,7 +4,7 @@
 
   <a href="https://learn.chatgpt.com/docs/plugins"><img src="https://img.shields.io/badge/Codex-Plugin-111827?logo=openai&amp;logoColor=white" alt="Codex Plugin" /></a>
   <img src="https://img.shields.io/badge/Release-1.0.0-2563EB" alt="Release 1.0.0" />
-  <a href="#agent-neutral-protocol"><img src="https://img.shields.io/badge/Protocol-1.0.0-7C3AED" alt="Protocol 1.0.0" /></a>
+  <a href="EchoesProtocol.md"><img src="https://img.shields.io/badge/Protocol-1.0.0-7C3AED" alt="Protocol 1.0.0" /></a>
   <a href="#using-different-agents"><img src="https://img.shields.io/badge/Agents-Codex%20%7C%20OpenCode%20%7C%20Claude-059669" alt="Codex, OpenCode, and Claude" /></a>
   <a href="https://github.com/psinetron/echoes-vault-codex/actions/workflows/tests.yml"><img src="https://github.com/psinetron/echoes-vault-codex/actions/workflows/tests.yml/badge.svg" alt="Tests" /></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&amp;logoColor=white" alt="Python 3.9+" /></a>
@@ -55,6 +55,7 @@ and adapters so Codex, OpenCode, Claude, and teammates all follow the same rules
 
 - [Installation](#installation)
 - [What it provides](#what-it-provides)
+- [Protocol 1.0.0 specification](EchoesProtocol.md)
 - [Agent-neutral protocol](#agent-neutral-protocol)
 - [Open Knowledge Format alignment](#open-knowledge-format-alignment)
 - [Status card and quick actions](#status-card-and-quick-actions)
@@ -295,6 +296,13 @@ local lock live at `.echoes-vault/state.json` and `.echoes-vault/lock`; they con
 knowledge and are ignored locally.
 
 ## Agent-neutral protocol
+
+The complete public implementer specification is available in
+**[EchoesProtocol.md](EchoesProtocol.md)**. It defines the repository layout, marker and page
+schemas, deterministic index algorithm, unique daily-log format, portable CLI contract, locking,
+optimistic concurrency, Git behavior, migration rules, security boundaries, and a compatibility
+checklist for third-party agents and tools. The specification is MIT-licensed and can be reused by
+Codex, OpenCode, Claude, editor extensions, custom agents, and independent integrations.
 
 Initialization writes `EchoesVault/AGENT_PROTOCOL.md` and adds a delimited EchoesVault block to
 the repository's `AGENTS.md` and `CLAUDE.md`. Existing content outside that block is preserved.
